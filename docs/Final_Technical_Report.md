@@ -20,11 +20,11 @@ This research presents a rigorous, empirical comparative evaluation of six promi
 5. **Wavelet Packet Transform via WPT** (Uniform full-tree sub-band analysis; 16 features)
 6. **Hilbert-Huang Transform via HHT** (Non-linear, non-stationary empirical mode decomposition; 8 features)
 
-A combined 66-dimensional feature dataset was extracted and audited against strict numerical and data-leakage standards. A multi-class **XGBoost** classifier was systematically trained and evaluated across 12 distinct feature configurations (A through L) under 5-fold cross-validation. Furthermore, all configurations were subjected to noise-stress testing under Additive White Gaussian Noise (AWGN) at $40\text{ dB}$, $30\text{ dB}$, and $20\text{ dB}$ Signal-to-Noise Ratios (SNR) pursuant to **IEEE Std 1159-2019**.
+A combined 66-dimensional feature dataset was extracted and audited against strict numerical and data-leakage standards. A multi-class **XGBoost** classifier was systematically trained and evaluated across 12 distinct feature configurations (A through L) under 5-fold cross-validation. Furthermore, disturbance categories were modeled pursuant to **IEEE Std 1159-2019**, and all configurations were systematically subjected to noise-stress testing under Additive White Gaussian Noise (AWGN) at $40\text{ dB}$, $30\text{ dB}$, and $20\text{ dB}$ Signal-to-Noise Ratios (SNR) following established power-engineering protocols.
 
 Key experimental findings:
 - **Under Clean Conditions**: Multi-domain fusion (Configuration L: all 66 features) achieved the global maximum classification performance with **91.09% Test Accuracy** and **91.10% Macro F1-score**, achieving 100% precision and recall on pure sinusoidal and steady-state harmonic waveforms. Single-method performance was led by DWT (82.03%), followed by STFT (71.44%) and Statistical Features (71.32%).
-- **Under Severe Noise Conditions ($20\text{ dB}$ SNR)**: STFT features exhibited superior noise resilience (**38.18% accuracy**, only 33.26% total degradation from clean), whereas HHT suffered severe mode-mixing degradation ($6.41\%$).
+- **Under Severe Noise Conditions ($20\text{ dB}$ SNR)**: STFT features exhibited superior noise resilience (**38.18% accuracy**, a drop of only 33.26 percentage points / 46.56% relative loss from clean), whereas HHT suffered severe mode-mixing degradation ($6.41\%$, a 90.76% relative loss).
 - The results establish concrete engineering design trade-offs between classification accuracy, noise resilience, and computational complexity for edge smart grid sensors.
 
 ---
@@ -313,24 +313,26 @@ Tested levels:
 
 ### 7.2 Noise Degradation Results Table
 
-| Configuration | Clean ($\infty$) | 40 dB SNR | 30 dB SNR | 20 dB SNR | Total Degradation (Clean $\to$ 20 dB) |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **A. FFT only** | 68.79% | 56.21% | 38.94% | 23.18% | -45.62% |
-| **B. DWT only** | 82.03% | 50.47% | 37.76% | 23.79% | -58.24% |
-| **C. Statistical only** | 71.32% | 51.56% | 40.74% | 25.47% | -45.85% |
-| **D. STFT only** | **71.44%** | **64.74%** | **59.82%** | **38.18%** | **-33.26% (Most Resilient)** |
-| **E. WPT only** | 66.00% | 46.74% | 34.06% | 23.03% | -42.97% |
-| **F. HHT only** | 69.38% | 15.65% | 9.41% | 6.41% | -62.97% |
-| **G. FFT + DWT** | 86.71% | 59.18% | 43.41% | 28.41% | -58.29% |
-| **H. FFT + DWT + Stats** | 89.03% | 59.44% | 42.74% | 23.50% | -65.53% |
-| **I. FFT + DWT + STFT** | 87.62% | 62.03% | 49.26% | 31.00% | -56.62% |
-| **J. FFT + DWT + WPT** | 86.85% | 58.24% | 47.21% | 29.12% | -57.74% |
-| **K. FFT + DWT + HHT** | 89.68% | 42.32% | 31.59% | 22.21% | -67.47% |
-| **L. All Combined** | **91.09%** | 45.79% | 34.62% | 21.62% | -69.47% |
+| Configuration | Clean ($\infty$) | 40 dB SNR | 30 dB SNR | 20 dB SNR | Degradation (pp) | Relative Loss (%) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **A. FFT only** | 68.79% | 56.21% | 38.94% | 23.18% | -45.62 pp | -66.32% |
+| **B. DWT only** | 82.03% | 50.47% | 37.76% | 23.79% | -58.24 pp | -70.99% |
+| **C. Statistical only** | 71.32% | 51.56% | 40.74% | 25.47% | -45.85 pp | -64.29% |
+| **D. STFT only** | **71.44%** | **64.74%** | **59.82%** | **38.18%** | **-33.26 pp** | **-46.56% (Most Resilient)** |
+| **E. WPT only** | 66.00% | 46.74% | 34.06% | 23.03% | -42.97 pp | -65.11% |
+| **F. HHT only** | 69.38% | 15.65% | 9.41% | 6.41% | -62.97 pp | -90.76% |
+| **G. FFT + DWT** | 86.71% | 59.18% | 43.41% | 28.41% | -58.29 pp | -67.23% |
+| **H. FFT + DWT + Stats** | 89.03% | 59.44% | 42.74% | 23.50% | -65.53 pp | -73.60% |
+| **I. FFT + DWT + STFT** | 87.62% | 62.03% | 49.26% | 31.00% | -56.62 pp | -64.62% |
+| **J. FFT + DWT + WPT** | 86.85% | 58.24% | 47.21% | 29.12% | -57.74 pp | -66.47% |
+| **K. FFT + DWT + HHT** | 89.68% | 42.32% | 31.59% | 22.21% | -67.47 pp | -75.23% |
+| **L. All Combined** | **91.09%** | 45.79% | 34.62% | 21.62% | -69.47 pp | -76.27% |
+
+*Note: Degradation is expressed as both absolute percentage points ($\text{pp} = \text{Acc}_{20\text{dB}} - \text{Acc}_{\text{clean}}$) and relative percentage loss ($(\text{Acc}_{20\text{dB}} - \text{Acc}_{\text{clean}}) / \text{Acc}_{\text{clean}}$).*
 
 ### 7.3 Critical Physical Findings on Noise Resilience
-1. **Superiority of STFT under Noise**: STFT features demonstrated the highest resilience across all tested noise tiers ($64.74\%$ at $40\text{ dB}$, $59.82\%$ at $30\text{ dB}$, and $38.18\%$ at $20\text{ dB}$). The windowed integration ($N_{\text{perseg}} = 32$) acts as a natural low-pass averaging filter that suppresses uncorrelated white noise.
-2. **Fragility of Empirical Mode Decomposition (HHT)**: HHT experienced the most severe degradation under noise ($69.38\% \to 6.41\%$). In EMD, white noise introduces high-frequency local extrema, causing severe **mode mixing** where true disturbance oscillatory modes are fractured into false high-frequency IMFs.
+1. **Superiority of STFT under Noise**: STFT features demonstrated the highest resilience across all tested noise tiers ($64.74\%$ at $40\text{ dB}$, $59.82\%$ at $30\text{ dB}$, and $38.18\%$ at $20\text{ dB}$, limiting relative loss to $46.56\%$). The physical foundation of this resilience lies in spectral band isolation: STFT features integrate low-frequency power ($0\text{--}300\text{ Hz}$). Because additive white noise is uniformly distributed across the full Nyquist bandwidth ($0\text{--}2,500\text{ Hz}$), approximately $88\%$ of total noise power falls into higher frequency bins, leaving the fundamental power frequency information uncorrupted.
+2. **Fragility of Empirical Mode Decomposition (HHT)**: HHT experienced the most severe degradation under noise ($69.38\% \to 6.41\%$, a $90.76\%$ relative drop). Unlike fixed-basis transforms (STFT/DWT), EMD sifting is fully data-driven and guided by local extrema. High-frequency white noise injects numerous spurious local extrema into the waveform. Consequently, EMD sifts the noise into IMFs 1 and 2, which pushes the true $50\text{ Hz}$ fundamental power disturbance into IMF 3 (omitted by the 2-mode schema), corrupting the instantaneous frequency and amplitude features.
 3. **Engineering Deployment Recommendation**: For clean, shielded substations, **Configuration L (All Combined)** is optimal for maximum diagnostic precision ($91.09\%$). For unshielded, high-noise industrial distribution lines, **Configuration I (FFT + DWT + STFT)** or **Configuration D (STFT)** provides superior operational reliability.
 
 ---
@@ -339,14 +341,19 @@ Tested levels:
 
 | Deliverable Type | Artifact Path | Description |
 | :--- | :--- | :--- |
-| **Master Runner** | [`run_extended_pipeline.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/run_extended_pipeline.py) | Full end-to-end extraction, validation, and training runner |
-| **Noise Benchmark** | [`run_noise_robustness.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/run_noise_robustness.py) | IEEE Std 1159 AWGN noise stress testing runner |
+| **Master Runner** | [`main.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/main.py) | Full end-to-end extraction, validation, and training runner |
+| **Noise Benchmark** | [`run_noise_robustness.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/run_noise_robustness.py) | AWGN noise stress testing runner (Clean, 40 dB, 30 dB, 20 dB SNR) |
+| **Baseline Runner** | [`run_milestone_1.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/run_milestone_1.py) | Milestone 1 FFT + DWT baseline runner |
+| **Technical Thesis** | [`docs/Final_Technical_Report.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Final_Technical_Report.md) | Comprehensive final technical thesis report (this document) |
+| **Defense Slides** | [`docs/Defense_Presentation_Slides.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Defense_Presentation_Slides.md) | 11-slide defense presentation deck with speaking notes |
+| **Noise Audit** | [`docs/Noise_Robustness_Audit.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Noise_Robustness_Audit.md) | Ground-truth empirical audit of noise stress testing |
+| **Feature Dictionary** | [`docs/Feature_Dictionary.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Feature_Dictionary.md) | 66-feature mathematical definition and units |
+| **Dataset Inspection** | [`docs/Dataset_Inspection_Report.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Dataset_Inspection_Report.md) | Physical signal audit and SEED-PQD integrity verification |
 | **Feature Matrix** | [`data/processed/extended_features.csv`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/data/processed/extended_features.csv) | Full 17,000 x 68 feature matrix (20.96 MB) |
-| **Feature Dictionary** | [`docs/feature_dictionary.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/feature_dictionary.md) | 66-feature mathematical definition and units |
 | **Benchmark CSV** | [`outputs/comparative_model_results.csv`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/comparative_model_results.csv) | Clean comparative metrics table across configs A-L |
 | **Noise CSV** | [`outputs/noise_robustness_results.csv`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/noise_robustness_results.csv) | Multi-SNR degradation metrics table |
 | **Trained Model** | [`outputs/models/xgboost_best_model_L.json`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/models/xgboost_best_model_L.json) | Production serialized XGBoost model artifact |
-| **Visualizations** | [`outputs/figures/`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/figures/) | 14 publication-grade figures (spectrograms, curves, confusion heatmaps) |
+| **Visualizations** | [`outputs/figures/`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/figures/) | 13 publication-grade figures (spectrograms, curves, confusion heatmaps) |
 
 ---
 

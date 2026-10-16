@@ -54,7 +54,7 @@ def main():
     # 2. Load Extended Features Matrix
     extended_csv = os.path.join(processed_dir, "extended_features.csv")
     if not os.path.exists(extended_csv):
-        print(f"Error: {extended_csv} not found. Run run_extended_pipeline.py first!")
+        print(f"Error: {extended_csv} not found. Run main.py first!")
         sys.exit(1)
 
     print(f"\n>>> [STEP 2] Loading Extended Feature Matrix from '{extended_csv}'...")
@@ -136,7 +136,7 @@ def main():
             cm_20,
             class_names,
             title=f"Normalized Confusion Matrix: Configuration L under Severe Noise (20 dB SNR) (Test Acc: {acc_20*100:.2f}%)",
-            save_path=os.path.join(figures_dir, "confusion_matrix_config_L_20dB_SNR.png"),
+            save_path=os.path.join(figures_dir, "confusion_matrix_noisy_20dB.png"),
         )
 
     # 6. Print Summary Pivot Table

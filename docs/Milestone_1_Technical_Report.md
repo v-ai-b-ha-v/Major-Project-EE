@@ -298,7 +298,7 @@ ML Code/
 ├── visualization.py                 # Matplotlib waveform and spectrum generators
 ├── main_milestone.py                # End-to-end execution pipeline
 ├── requirements.txt                 # Environment dependencies
-├── dataset_inspection_report.md     # Inspection summary document
+├── Dataset_Inspection_Report.md     # Inspection summary document
 ├── README.md                        # Execution documentation
 └── extracted_features.csv           # Final extracted feature matrix (17,000 x 29)
 ```

@@ -3,7 +3,7 @@ Master Pipeline Runner: Extended Feature Extraction & Comparative XGBoost Classi
 ======================================================================================
 Project: Comparative Analysis of Signal Processing Techniques for
          Machine Learning-Based Power Quality Disturbance Classification
-Runner: run_extended_pipeline.py
+Runner: main.py
 
 Pipeline Steps Executed:
 1. Dataset inspection & loading (SEED-PQD 17,000 signals)
@@ -215,7 +215,7 @@ def main():
     # 5. Save Feature Dictionary
     print("\n>>> [STEP 5] Generating and Saving Feature Dictionary (CSV & Markdown)...")
     dict_csv = os.path.join(processed_dir, "feature_dictionary.csv")
-    dict_md = os.path.join(PROJECT_ROOT, "docs", "feature_dictionary.md")
+    dict_md = os.path.join(PROJECT_ROOT, "docs", "Feature_Dictionary.md")
     save_feature_dictionary(output_csv=dict_csv, output_md=dict_md)
 
     # 6. Run XGBoost Comparative Benchmark Across 12 Configurations (A through L)
@@ -235,22 +235,14 @@ def main():
 
     # 7. Generate Visualizations for ML Results
     print("\n>>> [STEP 7] Generating Confusion Matrices and Method Comparison Plots...")
-    # Confusion matrix for Best Model
+    # Confusion matrix for Clean Best Model (Config L)
+    best_acc = comparison_df.loc[comparison_df['config_id']==best_cfg_key, 'accuracy'].values[0] * 100.0
     plot_confusion_matrix(
         cms[best_cfg_key],
         class_names,
-        title=f"Normalized Confusion Matrix: Best Model [{best_cfg_key}] (Test Accuracy: {comparison_df.loc[comparison_df['config_id']==best_cfg_key, 'accuracy'].values[0]*100:.2f}%)",
-        save_path=os.path.join(figures_dir, f"confusion_matrix_best_config_{best_cfg_key}.png"),
+        title=f"Normalized Confusion Matrix: Clean Test Set [{best_cfg_key}] ({best_acc:.2f}% Test Accuracy)",
+        save_path=os.path.join(figures_dir, "confusion_matrix_clean.png"),
     )
-
-    # Confusion matrix for Configuration L (All Features)
-    if "L" in cms:
-        plot_confusion_matrix(
-            cms["L"],
-            class_names,
-            title=f"Normalized Confusion Matrix: Configuration L (All 66 Features) (Test Accuracy: {comparison_df.loc[comparison_df['config_id']=='L', 'accuracy'].values[0]*100:.2f}%)",
-            save_path=os.path.join(figures_dir, "confusion_matrix_all_features_config_L.png"),
-        )
 
     # Comparison bar chart
     plot_feature_method_comparison(

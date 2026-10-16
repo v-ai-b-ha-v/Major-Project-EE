@@ -131,7 +131,7 @@ The dataset contains **17 distinct classes** divided into baseline, single, and 
 
 ## 8. Verified Artifact Checklist
 
-- [x] `dataset_inspection_report.md` (This document)
+- [x] `Dataset_Inspection_Report.md` (This document)
 - [x] `requirements.txt` (Dependencies: NumPy, Pandas, SciPy, Matplotlib, PyWavelets)
 - [x] `data_loader.py` (Modular loading, shape validation, sanity checks)
 - [x] `signal_processing.py` (FFT & DWT implementation and feature extractors)

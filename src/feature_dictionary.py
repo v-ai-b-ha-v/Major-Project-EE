@@ -114,7 +114,7 @@ def generate_feature_dictionary():
     return df
 
 
-def save_feature_dictionary(output_csv="data/processed/feature_dictionary.csv", output_md="docs/feature_dictionary.md"):
+def save_feature_dictionary(output_csv="data/processed/feature_dictionary.csv", output_md="docs/Feature_Dictionary.md"):
     """
     Saves the feature dictionary in both CSV and GitHub Flavored Markdown formats.
     """

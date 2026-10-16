@@ -40,22 +40,28 @@ ML Code/
 │   │   ├── stft_spectrograms.png    # Short-Time Fourier Transform time-frequency power maps
 │   │   ├── wpt_subband_energies.png # Wavelet Packet Transform 8-band uniform energy profiles
 │   │   ├── hht_decomposition.png    # Empirical Mode Decomposition & IMF spectra
-│   │   ├── confusion_matrix_best_config_L.png # Best model (Config L) confusion matrix
-│   │   ├── confusion_matrix_all_features_config_L.png # 17-class normalized heatmap
+│   │   ├── confusion_matrix_clean.png # Best model (Config L) confusion matrix on clean test data
+│   │   ├── confusion_matrix_noisy_20dB.png # Config L confusion matrix under 20 dB AWGN noise
+│   │   ├── noise_waveform_comparison.png # Clean vs 40, 30, 20 dB SNR waveform visualizer
+│   │   ├── snr_accuracy_curves.png  # Accuracy vs SNR trajectory across feature configurations
 │   │   └── method_comparison.png    # Bar chart comparing Accuracy, F1, & Dimensionality (A-L)
 │   ├── models/                      # Saved trained models
 │   │   └── xgboost_best_model_L.json# Serialized best XGBoost model artifact
 │   ├── comparative_model_results.csv# Benchmark comparison table across configs A through L
+│   ├── noise_robustness_results.csv # Empirical accuracy across clean, 40, 30, and 20 dB SNR
 │   └── per_class_report_best_config_L.csv # Detailed per-class precision, recall, and F1
 │
 ├── docs/                            # Comprehensive documentation & reports
-│   ├── Milestone_1_Technical_Report.md # Formal technical milestone 1 report
-│   ├── dataset_inspection_report.md    # Dataset verification findings
-│   ├── feature_dictionary.md        # Comprehensive 66-feature mathematical dictionary
-│   └── Details.txt                  # Original dataset parameters
+│   ├── Final_Technical_Report.md    # Formal comprehensive technical thesis report
+│   ├── Defense_Presentation_Slides.md # 11-slide presentation deck with speaking notes
+│   ├── Feature_Dictionary.md        # Comprehensive 66-feature mathematical dictionary
+│   ├── Noise_Robustness_Audit.md    # Deep-dive empirical audit of noise stress testing
+│   ├── Dataset_Inspection_Report.md # Dataset integrity & physical signal verification
+│   └── Milestone_1_Technical_Report.md # Baseline FFT + DWT milestone report
 │
-├── run_milestone_1.py               # Milestone 1 runner (FFT + DWT)
-├── run_extended_pipeline.py         # Master runner for extended 4 methods & XGBoost benchmark
+├── main.py                          # Master runner for extended 6 methods & XGBoost benchmark
+├── run_noise_robustness.py          # AWGN noise robustness evaluation runner (Clean, 40, 30, 20 dB)
+├── run_milestone_1.py               # Milestone 1 runner (FFT + DWT baseline)
 ├── requirements.txt                 # Python dependencies
 └── README.md                        # Master project guide (this file)
 ```
@@ -103,10 +109,10 @@ pip install -r requirements.txt
 python run_milestone_1.py
 ```
 
-### C. Running Extended Pipeline (All 6 Methods + XGBoost Comparative Benchmark)
+### C. Running Master Extended Pipeline (All 6 Methods + XGBoost Benchmark)
 To extract all 66 features, validate the matrix, generate all figures, and evaluate configurations A through L:
 ```bash
-python run_extended_pipeline.py
+python main.py
 ```
 *(Execution finishes in ~95 seconds using multi-core parallelization).*
 
@@ -142,24 +148,30 @@ All experiments were executed with a strict 80/20 stratified train/test split (1
 
 ---
 
-## 6. Noise Robustness (AWGN) Stress-Testing Results (IEEE Std 1159)
+## 6. Noise Robustness (AWGN) Stress-Testing Results
 
-To simulate practical field environments, zero-mean Additive White Gaussian Noise was injected into the test partition signals:
+Disturbance categories and synthetic definitions adhere to **IEEE Std 1159-2019**, while the noise stress-testing protocol applies zero-mean Additive White Gaussian Noise (AWGN) at $40\text{ dB}$, $30\text{ dB}$, and $20\text{ dB}$ SNR following established power-engineering benchmarks:
 
-| Configuration | Clean ($\infty$) | 40 dB SNR | 30 dB SNR | 20 dB SNR | Degradation (Clean $\to$ 20 dB) |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **A. FFT only** | 68.79% | 56.21% | 38.94% | 23.18% | -45.62% |
-| **B. DWT only** | 82.03% | 50.47% | 37.76% | 23.79% | -58.24% |
-| **C. Statistical only** | 71.32% | 51.56% | 40.74% | 25.47% | -45.85% |
-| **D. STFT only** | **71.44%** | **64.74%** | **59.82%** | **38.18%** | **-33.26% (Most Resilient)** |
-| **E. WPT only** | 66.00% | 46.74% | 34.06% | 23.03% | -42.97% |
-| **F. HHT only** | 69.38% | 15.65% | 9.41% | 6.41% | -62.97% |
-| **G. FFT + DWT** | 86.71% | 59.18% | 43.41% | 28.41% | -58.29% |
-| **H. FFT + DWT + Stats** | 89.03% | 59.44% | 42.74% | 23.50% | -65.53% |
-| **I. FFT + DWT + STFT** | 87.62% | 62.03% | 49.26% | 31.00% | -56.62% |
-| **J. FFT + DWT + WPT** | 86.85% | 58.24% | 47.21% | 29.12% | -57.74% |
-| **K. FFT + DWT + HHT** | 89.68% | 42.32% | 31.59% | 22.21% | -67.47% |
-| **L. All Combined** | **91.09%** | 45.79% | 34.62% | 21.62% | -69.47% |
+| Configuration | Clean ($\infty$) | 40 dB SNR | 30 dB SNR | 20 dB SNR | Degradation (pp) | Relative Loss (%) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **A. FFT only** | 68.79% | 56.21% | 38.94% | 23.18% | -45.62 pp | -66.32% |
+| **B. DWT only** | 82.03% | 50.47% | 37.76% | 23.79% | -58.24 pp | -70.99% |
+| **C. Statistical only** | 71.32% | 51.56% | 40.74% | 25.47% | -45.85 pp | -64.29% |
+| **D. STFT only** | **71.44%** | **64.74%** | **59.82%** | **38.18%** | **-33.26 pp** | **-46.56% (Most Resilient)** |
+| **E. WPT only** | 66.00% | 46.74% | 34.06% | 23.03% | -42.97 pp | -65.11% |
+| **F. HHT only** | 69.38% | 15.65% | 9.41% | 6.41% | -62.97 pp | -90.76% |
+| **G. FFT + DWT** | 86.71% | 59.18% | 43.41% | 28.41% | -58.29 pp | -67.23% |
+| **H. FFT + DWT + Stats** | 89.03% | 59.44% | 42.74% | 23.50% | -65.53 pp | -73.60% |
+| **I. FFT + DWT + STFT** | 87.62% | 62.03% | 49.26% | 31.00% | -56.62 pp | -64.62% |
+| **J. FFT + DWT + WPT** | 86.85% | 58.24% | 47.21% | 29.12% | -57.74 pp | -66.47% |
+| **K. FFT + DWT + HHT** | 89.68% | 42.32% | 31.59% | 22.21% | -67.47 pp | -75.23% |
+| **L. All Combined** | **91.09%** | 45.79% | 34.62% | 21.62% | -69.47 pp | -76.27% |
+
+*Note: Degradation is expressed both as absolute percentage points ($\text{pp} = \text{Acc}_{20\text{dB}} - \text{Acc}_{\text{clean}}$) and relative percentage loss ($(\text{Acc}_{20\text{dB}} - \text{Acc}_{\text{clean}}) / \text{Acc}_{\text{clean}}$).*
+
+### Physical Noise Mechanisms Discovered:
+- **STFT Low-Band Noise Filtering**: STFT's energy features concentrate in the $0\text{--}300\text{ Hz}$ band. Because white noise is uniformly distributed across the full Nyquist bandwidth ($0\text{--}2,500\text{ Hz}$), only $\approx 12\%$ of total noise energy enters the primary diagnostic band, preserving $100\%$ of fundamental power energy and yielding the highest noise resilience.
+- **HHT EMD Mode Mixing**: EMD sifting relies directly on local extrema. Broadband white noise creates dense high-frequency extrema that corrupt IMFs 1 & 2, pushing the fundamental 50 Hz power disturbance into IMF 3 (omitted by the 2-mode decomposition), causing sharp performance degradation.
 
 To run the noise robustness stress testing pipeline:
 ```bash
@@ -177,8 +189,8 @@ python run_noise_robustness.py
 | **3** | Initial signal processing (FFT & DWT) | **Completed** | [`src/signal_processing.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/signal_processing.py) (27 features) |
 | **4** | Additional signal processing (STFT, Stats, WPT, HHT) | **Completed** | Sections D, E, F, G in `src/signal_processing.py` (39 features) |
 | **5** | Feature dataset preparation & normalization | **Completed** | [`data/processed/extended_features.csv`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/data/processed/extended_features.csv) (17,000 x 68) |
-| **6** | Machine-learning implementation (XGBoost) | **Completed** | [`src/classification.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/classification.py) (12 configurations A through L) |
+| **6** | Machine-learning implementation (XGBoost) | **Completed** | [`main.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/main.py), [`src/classification.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/classification.py) |
 | **7** | Model evaluation (Metrics & Confusion Matrices) | **Completed** | [`outputs/comparative_model_results.csv`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/comparative_model_results.csv), confusion matrices |
 | **8** | Comparative analysis across signal processing techniques | **Completed** | [`outputs/figures/method_comparison.png`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/figures/method_comparison.png) |
-| **9** | Validation, robustness (Noise/AWGN), and research contribution | **Completed** | [`run_noise_robustness.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/run_noise_robustness.py), `outputs/noise_robustness_results.csv` |
-| **10** | Final documentation, thesis, and defense presentation | **Completed** | [`docs/Major_Project_Comprehensive_Technical_Report.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Major_Project_Comprehensive_Technical_Report.md), `docs/Defense_Presentation_Slides.md` |
+| **9** | Validation, robustness (Noise/AWGN), and research contribution | **Completed** | [`run_noise_robustness.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/run_noise_robustness.py), [`docs/Noise_Robustness_Audit.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Noise_Robustness_Audit.md) |
+| **10** | Final documentation, thesis, and defense presentation | **Completed** | [`docs/Final_Technical_Report.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Final_Technical_Report.md), [`docs/Defense_Presentation_Slides.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Defense_Presentation_Slides.md) |

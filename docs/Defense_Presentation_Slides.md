@@ -114,17 +114,17 @@
 ---
 
 ## Slide 9: Noise Robustness & AWGN Stress Testing (Step 9)
-- **Motivation:** Substation CT/PT sensors operate in noisy electromagnetic environments (IEEE 1159).
-- **Test Methodology:** Additive White Gaussian Noise (AWGN) injected into test waveforms at **$40\text{ dB}$, $30\text{ dB}$, and $20\text{ dB}$ SNR**.
+- **Motivation:** Substation CT/PT sensors and industrial meters operate in electrically noisy environments.
+- **Standards & Protocol:** Disturbance taxonomy defined per **IEEE Std 1159-2019**; AWGN stress testing applied at **$40\text{ dB}$, $30\text{ dB}$, and $20\text{ dB}$ SNR**.
 - **Experimental Findings**:
   - **STFT is the Most Noise-Resilient Technique**:
-    - Retains **64.74%** accuracy at $40\text{ dB}$ SNR and **59.82%** at $30\text{ dB}$ SNR.
-    - Lowest degradation across the spectrum (only 33.26% loss from Clean to $20\text{ dB}$).
-    - *Physical Reason:* Moving Hann window integration acts as a natural low-pass averaging filter that suppresses white Gaussian noise.
+    - Retains **64.74%** accuracy at $40\text{ dB}$ SNR, **59.82%** at $30\text{ dB}$, and **38.18%** at $20\text{ dB}$.
+    - Lowest degradation across the spectrum: drop of only **33.26 percentage points** (**46.56% relative loss** from Clean to $20\text{ dB}$ vs. $76.27\%$ loss for Config L).
+    - *Physical Mechanism:* STFT energy features concentrate in the low-frequency band ($0\text{--}300\text{ Hz}$). Because white noise is uniformly spread across the $0\text{--}2,500\text{ Hz}$ Nyquist bandwidth, $\approx 88\%$ of noise energy falls outside this diagnostic band, leaving fundamental power signals intact.
   - **HHT Suffers Severe Noise Degradation**:
-    - Drops to $15.65\%$ at $40\text{ dB}$ and $6.41\%$ at $20\text{ dB}$.
-    - *Physical Reason:* White noise introduces artificial local extrema, causing severe **mode mixing** during EMD sifting.
-- *Speaking Notes: This is a major engineering contribution: while HHT enhances clean-grid accuracy, STFT is essential for unshielded, high-noise industrial environments.*
+    - Drops to $15.65\%$ at $40\text{ dB}$ and $6.41\%$ at $20\text{ dB}$ (**90.76% relative loss**).
+    - *Physical Mechanism:* High-frequency white noise injects artificial local extrema, causing EMD to sift noise into IMFs 1 & 2 and shifting the true 50 Hz disturbance into IMF 3 (omitted by 2-mode scheme).
+- *Speaking Notes: This is a major engineering contribution: while HHT provides clean-grid phase resolution, STFT is essential for unshielded, high-noise industrial feeders.*
 
 ---
 
