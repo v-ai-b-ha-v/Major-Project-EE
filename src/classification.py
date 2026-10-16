@@ -230,6 +230,12 @@ def run_comparative_experiments(
     trained_models[best_cfg_key].save_model(best_model_path)
     print(f"Saved best model artifact to: {best_model_path}")
 
+    # Save fitted scaler for best config
+    import joblib
+    best_scaler_path = os.path.join(save_dir, "models", f"scaler_best_config_{best_cfg_key}.joblib")
+    joblib.dump(scalers[best_cfg_key], best_scaler_path)
+    print(f"Saved best scaler artifact to: {best_scaler_path}")
+
     # Also save Configuration L model if different
     if best_cfg_key != "L":
         model_l_path = os.path.join(save_dir, "models", "xgboost_model_L_all_features.json")
