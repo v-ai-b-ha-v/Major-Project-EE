@@ -1,0 +1,69 @@
+column_name,family,domain,units,description
+class_label,Metadata,Labels,String,"Human-readable disturbance class name (e.g., Pure_Sinusoidal, Sag, Swell)"
+class_index,Metadata,Labels,Integer [0-16],Zero-indexed integer label for ML classification
+fft_fund_mag,FFT,Frequency,p.u.,Normalized magnitude of fundamental power frequency bin at 50 Hz
+fft_thd,FFT,Frequency,Ratio (dimensionless),Total Harmonic Distortion: sqrt(sum(harmonics^2)) / fundamental_magnitude
+fft_spec_energy,FFT,Frequency,p.u.^2,Total discrete spectral energy: sum of squared magnitude bins
+fft_spec_centroid,FFT,Frequency,Hz,Spectral center-of-mass frequency: sum(f * mag) / sum(mag)
+fft_spec_entropy,FFT,Frequency,nats,Spectral entropy measuring peakedness vs. dispersion of power distribution
+fft_dominant_freq,FFT,Frequency,Hz,Frequency corresponding to the maximum spectral magnitude peak
+fft_dominant_mag,FFT,Frequency,p.u.,Magnitude of the dominant spectral peak
+dwt_cA3_energy,DWT,Time-Scale,p.u.^2,Sub-band energy (sum of squared coefficients) for Approximation band [0.0 - 312.5 Hz] containing 50 Hz fundamental and 3rd/5th harmonics
+dwt_cA3_std,DWT,Time-Scale,p.u.,Standard deviation of wavelet coefficients for Approximation band [0.0 - 312.5 Hz] containing 50 Hz fundamental and 3rd/5th harmonics
+dwt_cA3_rel_energy,DWT,Time-Scale,Ratio [0-1],Relative energy ratio: cA3 energy divided by total wavelet energy
+dwt_cA3_mav,DWT,Time-Scale,p.u.,Mean Absolute Value of wavelet coefficients for Approximation band [0.0 - 312.5 Hz] containing 50 Hz fundamental and 3rd/5th harmonics
+dwt_cA3_max,DWT,Time-Scale,p.u.,Maximum absolute coefficient amplitude in cA3
+dwt_cD3_energy,DWT,Time-Scale,p.u.^2,Sub-band energy (sum of squared coefficients) for Detail band [312.5 - 625.0 Hz] containing mid-order harmonics
+dwt_cD3_std,DWT,Time-Scale,p.u.,Standard deviation of wavelet coefficients for Detail band [312.5 - 625.0 Hz] containing mid-order harmonics
+dwt_cD3_rel_energy,DWT,Time-Scale,Ratio [0-1],Relative energy ratio: cD3 energy divided by total wavelet energy
+dwt_cD3_mav,DWT,Time-Scale,p.u.,Mean Absolute Value of wavelet coefficients for Detail band [312.5 - 625.0 Hz] containing mid-order harmonics
+dwt_cD3_max,DWT,Time-Scale,p.u.,Maximum absolute coefficient amplitude in cD3
+dwt_cD2_energy,DWT,Time-Scale,p.u.^2,Sub-band energy (sum of squared coefficients) for Detail band [625.0 - 1250.0 Hz] containing oscillatory transients
+dwt_cD2_std,DWT,Time-Scale,p.u.,Standard deviation of wavelet coefficients for Detail band [625.0 - 1250.0 Hz] containing oscillatory transients
+dwt_cD2_rel_energy,DWT,Time-Scale,Ratio [0-1],Relative energy ratio: cD2 energy divided by total wavelet energy
+dwt_cD2_mav,DWT,Time-Scale,p.u.,Mean Absolute Value of wavelet coefficients for Detail band [625.0 - 1250.0 Hz] containing oscillatory transients
+dwt_cD2_max,DWT,Time-Scale,p.u.,Maximum absolute coefficient amplitude in cD2
+dwt_cD1_energy,DWT,Time-Scale,p.u.^2,Sub-band energy (sum of squared coefficients) for Detail band [1250.0 - 2500.0 Hz] containing high-frequency notches and steep edges
+dwt_cD1_std,DWT,Time-Scale,p.u.,Standard deviation of wavelet coefficients for Detail band [1250.0 - 2500.0 Hz] containing high-frequency notches and steep edges
+dwt_cD1_rel_energy,DWT,Time-Scale,Ratio [0-1],Relative energy ratio: cD1 energy divided by total wavelet energy
+dwt_cD1_mav,DWT,Time-Scale,p.u.,Mean Absolute Value of wavelet coefficients for Detail band [1250.0 - 2500.0 Hz] containing high-frequency notches and steep edges
+dwt_cD1_max,DWT,Time-Scale,p.u.,Maximum absolute coefficient amplitude in cD1
+stat_rms,Statistical,Time,p.u.,Root Mean Square amplitude: sqrt(1/N * sum(x[n]^2))
+stat_std,Statistical,Time,p.u.,Sample standard deviation (signal spread around mean)
+stat_var,Statistical,Time,p.u.^2,Signal variance (second central moment)
+stat_skewness,Statistical,Time,Dimensionless,Fisher-Pearson standardized 3rd moment measuring waveform asymmetry
+stat_kurtosis,Statistical,Time,Dimensionless,Fisher excess kurtosis measuring heavy-tailedness (normal distribution = 0.0)
+stat_crest_factor,Statistical,Time,Ratio,Ratio of absolute peak amplitude to RMS: max|x| / RMS
+stat_peak_to_peak,Statistical,Time,p.u.,Dynamic excursion range: max(x) - min(x)
+stft_mean_energy,STFT,Time-Frequency,p.u.^2 / Hz,Mean spectrogram power density across time-frequency bins
+stft_max_energy,STFT,Time-Frequency,p.u.^2 / Hz,Maximum spectrogram power density (peak energy concentration)
+stft_std_energy,STFT,Time-Frequency,p.u.^2 / Hz,Standard deviation of spectrogram power density
+stft_energy_low_band,STFT,Time-Frequency,p.u.^2,Integrated energy in fundamental low band [0.0 - 300.0 Hz]
+stft_energy_mid_band,STFT,Time-Frequency,p.u.^2,Integrated energy in intermediate harmonic/transient band (300.0 - 1200.0 Hz]
+stft_energy_high_band,STFT,Time-Frequency,p.u.^2,Integrated energy in high-frequency band (1200.0 - 2500.0 Hz]
+stft_rel_energy_low,STFT,Time-Frequency,Ratio [0-1],Ratio of low-band power to total spectrogram power
+stft_temporal_variability,STFT,Time-Frequency,p.u.^2,Average across frequency bins of standard deviation across time slices
+wpt_band0_energy,WPT,Wavelet Packet,p.u.^2,Sub-band energy (sum of squared coefficients) in 0.0 - 312.5 Hz (Fundamental 50 Hz and low-order 3rd/5th harmonics)
+wpt_band0_rel_energy,WPT,Wavelet Packet,Ratio [0-1],Relative energy ratio: band0 energy divided by total WPT tree energy
+wpt_band1_energy,WPT,Wavelet Packet,p.u.^2,"Sub-band energy (sum of squared coefficients) in 312.5 - 625.0 Hz (7th, 9th, 11th harmonic components)"
+wpt_band1_rel_energy,WPT,Wavelet Packet,Ratio [0-1],Relative energy ratio: band1 energy divided by total WPT tree energy
+wpt_band2_energy,WPT,Wavelet Packet,p.u.^2,Sub-band energy (sum of squared coefficients) in 625.0 - 937.5 Hz (Mid-frequency resonance oscillations)
+wpt_band2_rel_energy,WPT,Wavelet Packet,Ratio [0-1],Relative energy ratio: band2 energy divided by total WPT tree energy
+wpt_band3_energy,WPT,Wavelet Packet,p.u.^2,Sub-band energy (sum of squared coefficients) in 937.5 - 1250.0 Hz (Higher-order harmonic distortions)
+wpt_band3_rel_energy,WPT,Wavelet Packet,Ratio [0-1],Relative energy ratio: band3 energy divided by total WPT tree energy
+wpt_band4_energy,WPT,Wavelet Packet,p.u.^2,Sub-band energy (sum of squared coefficients) in 1250.0 - 1562.5 Hz (Lower oscillatory transient band)
+wpt_band4_rel_energy,WPT,Wavelet Packet,Ratio [0-1],Relative energy ratio: band4 energy divided by total WPT tree energy
+wpt_band5_energy,WPT,Wavelet Packet,p.u.^2,Sub-band energy (sum of squared coefficients) in 1562.5 - 1875.0 Hz (Mid oscillatory transient band)
+wpt_band5_rel_energy,WPT,Wavelet Packet,Ratio [0-1],Relative energy ratio: band5 energy divided by total WPT tree energy
+wpt_band6_energy,WPT,Wavelet Packet,p.u.^2,Sub-band energy (sum of squared coefficients) in 1875.0 - 2187.5 Hz (High oscillatory transient band)
+wpt_band6_rel_energy,WPT,Wavelet Packet,Ratio [0-1],Relative energy ratio: band6 energy divided by total WPT tree energy
+wpt_band7_energy,WPT,Wavelet Packet,p.u.^2,Sub-band energy (sum of squared coefficients) in 2187.5 - 2500.0 Hz (Fast notches and steep edge transients)
+wpt_band7_rel_energy,WPT,Wavelet Packet,Ratio [0-1],Relative energy ratio: band7 energy divided by total WPT tree energy
+hht_imf1_mean_amp,HHT,Hilbert-Huang,p.u.,"Mean instantaneous amplitude of Intrinsic Mode Function 1 (high-frequency, fast transient mode)"
+hht_imf1_std_amp,HHT,Hilbert-Huang,p.u.,"Standard deviation of instantaneous amplitude of Intrinsic Mode Function 1 (high-frequency, fast transient mode)"
+hht_imf1_mean_freq,HHT,Hilbert-Huang,Hz,"Mean instantaneous frequency of Intrinsic Mode Function 1 (high-frequency, fast transient mode) (bounded to [0, fs/2])"
+hht_imf1_energy,HHT,Hilbert-Huang,p.u.^2,"Discrete energy (sum of squared values) of Intrinsic Mode Function 1 (high-frequency, fast transient mode)"
+hht_imf2_mean_amp,HHT,Hilbert-Huang,p.u.,Mean instantaneous amplitude of Intrinsic Mode Function 2 (dominant fundamental 50 Hz intermediate mode)
+hht_imf2_std_amp,HHT,Hilbert-Huang,p.u.,Standard deviation of instantaneous amplitude of Intrinsic Mode Function 2 (dominant fundamental 50 Hz intermediate mode)
+hht_imf2_mean_freq,HHT,Hilbert-Huang,Hz,"Mean instantaneous frequency of Intrinsic Mode Function 2 (dominant fundamental 50 Hz intermediate mode) (bounded to [0, fs/2])"
+hht_imf2_energy,HHT,Hilbert-Huang,p.u.^2,Discrete energy (sum of squared values) of Intrinsic Mode Function 2 (dominant fundamental 50 Hz intermediate mode)

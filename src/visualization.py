@@ -16,8 +16,10 @@ This module provides plotting functions for:
 import os
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from src.signal_processing import compute_fft, compute_dwt
+from src.signal_processing import compute_fft, compute_dwt, compute_stft, compute_wpt, compute_hht
 
 # Modern clean aesthetic styling
 plt.rcParams["font.sans-serif"] = "DejaVu Sans"
@@ -326,7 +328,255 @@ def plot_dwt_feature_comparison(features_df, save_path=None):
     ax.legend(title="Wavelet Sub-bands", fontsize=9)
     ax.grid(axis="y", linestyle="--", alpha=0.5)
 
+    print(f"Saved DWT feature comparison plot to: {save_path}")
+
+
+def plot_stft_spectrograms(X, y_str, fs=5000, save_path=None):
+    """
+    Plots STFT time-frequency spectrograms for 4 representative power quality disturbances:
+    1. Pure Sinusoidal (baseline)
+    2. Sag (amplitude sag)
+    3. Harmonics (harmonic distortion)
+    4. Oscillatory Transient (high-frequency oscillation)
+    """
+    save_path = _resolve_save_path(save_path, "stft_spectrograms.png")
+    rep_classes = ["Pure_Sinusoidal", "Sag", "Harmonics", "Oscillatory_Transient"]
+
+    fig, axes = plt.subplots(2, 2, figsize=(13, 9), dpi=300)
+    axes = axes.flatten()
+
+    for idx, cname in enumerate(rep_classes):
+        match_idx = np.where(y_str == cname)[0]
+        sig = X[match_idx[0]] if len(match_idx) > 0 else np.zeros(100)
+        f, t, Zxx = compute_stft(sig, fs=fs, nperseg=32, noverlap=16, nfft=64)
+        S = np.abs(Zxx) ** 2
+
+        ax = axes[idx]
+        pcm = ax.pcolormesh(
+            t * 1000.0,
+            f,
+            S,
+            shading="gouraud",
+            cmap="viridis",
+        )
+        ax.set_title(f"Class: {cname.replace('_', ' ')}", fontsize=11, fontweight="bold")
+        ax.set_xlabel("Time (ms)", fontsize=9)
+        ax.set_ylabel("Frequency (Hz)", fontsize=9)
+        ax.set_ylim(0, 2500)
+        cbar = fig.colorbar(pcm, ax=ax, fraction=0.046, pad=0.04)
+        cbar.set_label("Power Density", fontsize=8)
+
+    fig.suptitle(
+        "Short-Time Fourier Transform (STFT) Spectrograms Across PQ Disturbances (fs = 5 kHz)",
+        fontsize=13,
+        fontweight="bold",
+        y=0.98,
+    )
     plt.tight_layout()
     plt.savefig(save_path)
     plt.close()
-    print(f"Saved DWT feature comparison plot to: {save_path}")
+    print(f"Saved STFT spectrograms plot to: {save_path}")
+
+
+def plot_wpt_subband_energies(df_features, save_path=None):
+    """
+    Plots Wavelet Packet Transform (WPT) relative energy distribution across all 8 terminal
+    sub-bands for key representative classes.
+    """
+    save_path = _resolve_save_path(save_path, "wpt_subband_energies.png")
+    wpt_rel_cols = [f"wpt_band{i}_rel_energy" for i in range(8)]
+    band_names = [f"B{i}\n[{i*312.5:.0f}-{(i+1)*312.5:.0f}Hz]" for i in range(8)]
+
+    rep_classes = ["Pure_Sinusoidal", "Sag", "Harmonics", "Oscillatory_Transient", "Notch", "Flicker"]
+    available = [c for c in rep_classes if c in df_features["class_label"].values]
+
+    mean_profiles = []
+    for c in available:
+        sub = df_features[df_features["class_label"] == c][wpt_rel_cols]
+        mean_profiles.append(sub.mean().values)
+    mean_profiles = np.array(mean_profiles)
+
+    fig, ax = plt.subplots(figsize=(13, 6), dpi=300)
+    x = np.arange(8)
+    n_classes = len(available)
+    width = 0.8 / n_classes
+    colors = plt.cm.tab10(np.linspace(0, 1, n_classes))
+
+    for i, c in enumerate(available):
+        offset = (i - (n_classes - 1) / 2) * width
+        ax.bar(
+            x + offset,
+            mean_profiles[i],
+            width,
+            label=c.replace("_", " "),
+            color=colors[i],
+            alpha=0.85,
+        )
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(band_names, fontsize=8)
+    ax.set_ylabel("Mean Relative Energy (Normalized)", fontsize=10, fontweight="bold")
+    ax.set_title(
+        "Wavelet Packet Transform (WPT Level 3, db4): Terminal Sub-Band Energy Distributions",
+        fontsize=12,
+        fontweight="bold",
+        pad=10,
+    )
+    ax.legend(title="Disturbance Class", fontsize=8, loc="upper right")
+    ax.grid(axis="y", linestyle="--", alpha=0.5)
+
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    print(f"Saved WPT sub-band energy plot to: {save_path}")
+
+
+def plot_hht_decomposition(X, y_str, selected_class="Oscillatory_Transient", fs=5000, save_path=None):
+    """
+    Plots the Empirical Mode Decomposition (EMD) and Hilbert instantaneous amplitude profile
+    for a representative disturbance signal.
+    """
+    save_path = _resolve_save_path(save_path, "hht_decomposition.png")
+    match_idx = np.where(y_str == selected_class)[0]
+    sig = X[match_idx[0]] if len(match_idx) > 0 else np.zeros(100)
+    t_ms = np.linspace(0, 20.0, len(sig), endpoint=False)
+
+    imfs = compute_hht(sig, fs=fs, max_imf=2)
+    num_imfs = imfs.shape[0] if (imfs is not None and imfs.ndim == 2) else 0
+
+    fig, axes = plt.subplots(3, 1, figsize=(11, 8), dpi=300, sharex=True)
+
+    # 1. Raw Signal
+    axes[0].plot(t_ms, sig, color="#1f77b4", lw=1.6)
+    axes[0].set_title(f"Original Signal: {selected_class.replace('_', ' ')}", fontsize=11, fontweight="bold")
+    axes[0].set_ylabel("Amplitude (p.u.)", fontsize=9)
+    axes[0].grid(True, linestyle="--", alpha=0.5)
+
+    # 2. IMF 1 (High frequency transient mode)
+    if num_imfs >= 1:
+        axes[1].plot(t_ms, imfs[0], color="#d62728", lw=1.4)
+        axes[1].set_title("IMF 1 (High-Frequency / Transient Mode)", fontsize=10, fontweight="bold")
+    else:
+        axes[1].plot(t_ms, np.zeros_like(t_ms), color="#d62728")
+        axes[1].set_title("IMF 1 (Not Active)", fontsize=10)
+    axes[1].set_ylabel("IMF 1 (p.u.)", fontsize=9)
+    axes[1].grid(True, linestyle="--", alpha=0.5)
+
+    # 3. IMF 2 (Dominant fundamental mode)
+    if num_imfs >= 2:
+        axes[2].plot(t_ms, imfs[1], color="#2ca02c", lw=1.4)
+        axes[2].set_title("IMF 2 (Fundamental 50 Hz Component)", fontsize=10, fontweight="bold")
+    elif num_imfs == 1:
+        axes[2].plot(t_ms, imfs[0], color="#2ca02c", lw=1.4)
+        axes[2].set_title("IMF 1 as Dominant Fundamental Mode", fontsize=10, fontweight="bold")
+    else:
+        axes[2].plot(t_ms, np.zeros_like(t_ms), color="#2ca02c")
+        axes[2].set_title("IMF 2 (Not Active)", fontsize=10)
+    axes[2].set_ylabel("IMF 2 (p.u.)", fontsize=9)
+    axes[2].set_xlabel("Time (ms)", fontsize=10, fontweight="bold")
+    axes[2].grid(True, linestyle="--", alpha=0.5)
+
+    fig.suptitle(
+        f"Hilbert-Huang Transform (HHT): Empirical Mode Decomposition of {selected_class.replace('_', ' ')}",
+        fontsize=12,
+        fontweight="bold",
+        y=0.98,
+    )
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    print(f"Saved HHT decomposition plot to: {save_path}")
+
+
+def plot_confusion_matrix(cm, class_names, title="XGBoost Confusion Matrix", save_path=None):
+    """
+    Plots a normalized confusion matrix heatmap for 17 PQD classes.
+    """
+    save_path = _resolve_save_path(save_path, "confusion_matrix.png")
+    cm_norm = cm.astype("float") / (cm.sum(axis=1)[:, np.newaxis] + 1e-12)
+
+    fig, ax = plt.subplots(figsize=(14, 12), dpi=300)
+    im = ax.imshow(cm_norm, interpolation="nearest", cmap="Blues")
+    cbar = ax.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label("Normalized Accuracy", fontsize=10, fontweight="bold")
+
+    ax.set(
+        xticks=np.arange(len(class_names)),
+        yticks=np.arange(len(class_names)),
+        xticklabels=[c.replace("_", " ") for c in class_names],
+        yticklabels=[c.replace("_", " ") for c in class_names],
+        title=title,
+        ylabel="True Class Label",
+        xlabel="Predicted Class Label",
+    )
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=8)
+    plt.setp(ax.get_yticklabels(), fontsize=8)
+
+    # Format numbers inside cells
+    thresh = cm_norm.max() / 2.0
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            val = cm_norm[i, j]
+            if val >= 0.01:
+                ax.text(
+                    j,
+                    i,
+                    f"{val:.2f}",
+                    ha="center",
+                    va="center",
+                    color="white" if val > thresh else "black",
+                    fontsize=7,
+                )
+
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    print(f"Saved confusion matrix plot to: {save_path}")
+
+
+def plot_feature_method_comparison(comparison_df, save_path=None):
+    """
+    Plots comparison bar charts across all evaluated feature configurations (A through L).
+    """
+    save_path = _resolve_save_path(save_path, "method_comparison.png")
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6), dpi=300)
+
+    configs = comparison_df["config_label"].values
+    acc = comparison_df["accuracy"].values * 100.0
+    f1 = comparison_df["macro_f1"].values * 100.0
+    features_count = comparison_df["num_features"].values
+
+    x = np.arange(len(configs))
+
+    # Subplot 1: Accuracy & Macro-F1
+    bars1 = ax1.bar(x - 0.2, acc, width=0.38, label="Test Accuracy (%)", color="#1f77b4", alpha=0.85)
+    bars2 = ax1.bar(x + 0.2, f1, width=0.38, label="Macro F1-Score (%)", color="#ff7f0e", alpha=0.85)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(configs, rotation=45, ha="right", fontsize=9)
+    ax1.set_ylabel("Score (%)", fontsize=10, fontweight="bold")
+    ax1.set_ylim(min(acc.min(), f1.min()) - 5, 102)
+    ax1.set_title("Classification Accuracy & Macro F1 Across Feature Sets", fontsize=11, fontweight="bold")
+    ax1.legend(loc="lower right")
+    ax1.grid(axis="y", linestyle="--", alpha=0.5)
+
+    # Subplot 2: Feature Dimensionality vs Performance
+    ax2.bar(x, features_count, color="#2ca02c", alpha=0.85, width=0.5)
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(configs, rotation=45, ha="right", fontsize=9)
+    ax2.set_ylabel("Number of Input Features", fontsize=10, fontweight="bold")
+    ax2.set_title("Feature Dimensionality Per Configuration", fontsize=11, fontweight="bold")
+    ax2.grid(axis="y", linestyle="--", alpha=0.5)
+
+    for i, v in enumerate(features_count):
+        ax2.text(i, v + 1, str(v), ha="center", fontsize=8, fontweight="bold")
+
+    fig.suptitle(
+        "Comparative Analysis of Signal Processing Techniques for PQD Classification (XGBoost)",
+        fontsize=13,
+        fontweight="bold",
+        y=0.98,
+    )
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    print(f"Saved feature method comparison plot to: {save_path}")
