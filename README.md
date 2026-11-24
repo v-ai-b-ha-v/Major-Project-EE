@@ -162,8 +162,8 @@ Historical single-realization results below are retained for traceability and mu
 
 *Note: Degradation is expressed both as absolute percentage points ($\text{pp} = \text{Acc}_{20\text{dB}} - \text{Acc}_{\text{clean}}$) and relative percentage loss ($(\text{Acc}_{20\text{dB}} - \text{Acc}_{\text{clean}}) / \text{Acc}_{\text{clean}}$).*
 
-### Physical Noise Mechanisms Hypothesized from the Current Feature Design:
-- **STFT Low-Band Noise Filtering**: STFT's energy features concentrate in the $0\text{--}300\text{ Hz}$ band. Because white noise is uniformly distributed across the full Nyquist bandwidth ($0\text{--}2,500\text{ Hz}$), only $\approx 12\%$ of total noise energy enters the primary diagnostic band, preserving $100\%$ of fundamental power energy and yielding the highest noise resilience.
+### Candidate Explanations to Validate Experimentally:
+- **STFT Low-Band Feature Concentration**: The configured STFT band-energy features summarize energy in the $0\text{--}300\text{ Hz}$ band. Because ideal white noise has uniform power spectral density across the Nyquist bandwidth ($0\text{--}2,500\text{ Hz}$), a 0–300 Hz band would contain approximately 12% of its expected noise power under an idealized assumption. This feature design does not itself filter the waveform or guarantee preservation of fundamental power; any robustness explanation must be supported by controlled experiments.
 - **HHT EMD Mode Mixing**: EMD sifting relies directly on local extrema. Broadband white noise creates dense high-frequency extrema that corrupt IMFs 1 & 2, pushing the fundamental 50 Hz power disturbance into IMF 3 (omitted by the 2-mode decomposition), causing sharp performance degradation.
 
 To run the noise robustness stress testing pipeline:
@@ -177,13 +177,13 @@ python run_noise_robustness.py
 
 | Step | Phase Description | Status | Deliverables / Output |
 | :---: | :--- | :---: | :--- |
-| **1** | Dataset acquisition and inspection | **Completed** | SEED-PQD v1 verified (17,000 signals, 17 classes) |
-| **2** | Data loading and preprocessing | **Completed** | [`src/data_loader.py`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/data_loader.py)`) |
-| **3** | Initial signal processing (FFT & DWT) | **Completed** | [`src/signal_processing.py`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/signal_processing.py)`) (27 features) |
-| **4** | Additional signal processing (STFT, Stats, WPT, HHT) | **Completed** | Sections D, E, F, G in `src/signal_processing.py` (39 features) |
-| **5** | Feature dataset preparation & normalization | **Completed** | [`data/processed/extended_features.csv`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/data/processed/extended_features.csv)`) (17,000 x 68) |
-| **6** | Machine-learning implementation (XGBoost) | **Completed** | [`main.py`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/main.py)`), [`src/classification.py`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/classification.py)`) |
-| **7** | Model evaluation (Metrics & Confusion Matrices) | **Completed** | [`outputs/comparative_model_results.csv`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/comparative_model_results.csv)`), confusion matrices |
-| **8** | Comparative analysis across signal processing techniques | **Completed** | [`outputs/figures/method_comparison.png`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/figures/method_comparison.png)`) |
-| **9** | Validation, robustness (Noise/AWGN), and research contribution | **Completed** | [`run_noise_robustness.py`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/run_noise_robustness.py)`), [`docs/Noise_Robustness_Audit.md`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Noise_Robustness_Audit.md)`) |
-| **10** | Final documentation, thesis, and defense presentation | **Completed** | [`docs/Final_Technical_Report.md`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Final_Technical_Report.md)`), [`docs/Defense_Presentation_Slides.md`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Defense_Presentation_Slides.md)`) |
+| **1** | Dataset acquisition and inspection | **Implemented; revalidation pending** | SEED-PQD v1 verified (17,000 signals, 17 classes) |
+| **2** | Data loading and preprocessing | **Implemented; revalidation pending** | `src/data_loader.py` |
+| **3** | Initial signal processing (FFT & DWT) | **Implemented; revalidation pending** | `src/signal_processing.py` (27 features) |
+| **4** | Additional signal processing (STFT, Stats, WPT, HHT) | **Implemented; revalidation pending** | Sections D, E, F, G in `src/signal_processing.py` (39 features) |
+| **5** | Feature dataset preparation & normalization | **Implemented; revalidation pending** | `data/processed/extended_features.csv` (17,000 x 68) |
+| **6** | Machine-learning implementation (XGBoost) | **Implemented; revalidation pending** | `main.py`, `src/classification.py` |
+| **7** | Model evaluation (Metrics & Confusion Matrices) | **Implemented; revalidation pending** | `outputs/comparative_model_results.csv`, confusion matrices |
+| **8** | Comparative analysis across signal processing techniques | **Implemented; revalidation pending** | `outputs/figures/method_comparison.png` |
+| **9** | Validation, robustness (Noise/AWGN), and research contribution | **Implemented; revalidation pending** | `run_noise_robustness.py`, `docs/Noise_Robustness_Audit.md` |
+| **10** | Final documentation, thesis, and defense presentation | **Implemented; revalidation pending** | `docs/Final_Technical_Report.md`, `docs/Defense_Presentation_Slides.md` |
