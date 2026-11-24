@@ -61,53 +61,29 @@ def main():
     df_features = pd.read_csv(extended_csv)
     print(f"Loaded matrix: {df_features.shape}")
 
-    # 3. Fit Models & Scalers on Clean Training Partition
-    print("\n>>> [STEP 3] Fitting Models & Scalers on Clean Training Partition...")
-    from sklearn.model_selection import train_test_split
-    from sklearn.preprocessing import StandardScaler
-    from src.classification import get_feature_groups, define_configurations, build_xgb_classifier
+    # 3. Run the corrected clean evaluation once and reuse its exact split,
+    # fitted models, and scalers for the AWGN benchmark. Never reuse a stale
+    # committed CSV as the clean baseline for newly trained noisy-test models.
+    print("\\n>>> [STEP 3] Running corrected clean benchmark and retaining its fitted artifacts...")
+    clean_eval = run_comparative_experiments(
+        df_features,
+        test_size=0.20,
+        random_state=42,
+        cv_folds=5,
+        save_dir=os.path.join(PROJECT_ROOT, "outputs"),
+    )
 
-    y = df_features["class_index"].values
-    indices = np.arange(len(df_features))
-    train_idx, test_idx = train_test_split(indices, test_size=0.20, stratify=y, random_state=42)
-    y_train = y[train_idx]
+    clean_results_df = clean_eval["comparison_df"]
+    train_idx = clean_eval["train_idx"]
+    test_idx = clean_eval["test_idx"]
+    trained_models = clean_eval["trained_models"]
+    scalers = clean_eval["scalers"]
+    class_names = clean_eval["class_names"]
 
-    unique_indices = np.unique(y)
-    class_names = [
-        df_features[df_features["class_index"] == idx]["class_label"].iloc[0]
-        for idx in unique_indices
-    ]
-
-    clean_results_csv = os.path.join(PROJECT_ROOT, "outputs", "comparative_model_results.csv")
-    if os.path.exists(clean_results_csv):
-        clean_results_df = pd.read_csv(clean_results_csv)
-    else:
-        clean_eval = run_comparative_experiments(
-            df_features,
-            test_size=0.20,
-            random_state=42,
-            cv_folds=5,
-            save_dir=os.path.join(PROJECT_ROOT, "outputs"),
-        )
-        clean_results_df = clean_eval["comparison_df"]
-
-    f_groups = get_feature_groups(df_features)
-    configs = define_configurations(f_groups)
-
-    trained_models = {}
-    scalers = {}
-    for cfg_id, cfg in configs.items():
-        cols = cfg["cols"]
-        X_train_raw = df_features[cols].values[train_idx]
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train_raw)
-        scalers[cfg_id] = scaler
-
-        clf = build_xgb_classifier(random_state=42)
-        clf.fit(X_train_scaled, y_train)
-        trained_models[cfg_id] = clf
-
-    print(f"Fitted all 12 XGBoost models and Scalers on training partition ({len(train_idx)} samples).")
+    print(
+        f"Using the same corrected evaluation split and fitted artifacts "
+        f"({len(train_idx)} training / {len(test_idx)} test samples)."
+    )
 
     # 4. Run Noise Robustness Benchmark
     print("\n>>> [STEP 4] Executing Noise Robustness Benchmark (40 dB, 30 dB, 20 dB SNR)...")
