@@ -22,11 +22,11 @@ L. All feature families combined (66 features)
 
 import os
 import time
+
+import joblib
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-from sklearn.model_selection import StratifiedKFold, train_test_split, cross_val_score
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -34,13 +34,15 @@ from sklearn.metrics import (
     f1_score,
     confusion_matrix,
     classification_report,
+    make_scorer,
 )
+from sklearn.model_selection import StratifiedKFold, train_test_split, cross_validate
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 
 def get_feature_groups(df):
-    """
-    Groups columns into their respective signal processing families.
-    """
+    """Group columns into their respective signal-processing families."""
     return {
         "fft": [c for c in df.columns if c.startswith("fft_")],
         "dwt": [c for c in df.columns if c.startswith("dwt_")],
@@ -52,11 +54,9 @@ def get_feature_groups(df):
 
 
 def define_configurations(feature_groups):
-    """
-    Defines the 12 evaluation configurations (A through L) with descriptive labels.
-    """
+    """Define the 12 evaluation configurations (A through L)."""
     g = feature_groups
-    configs = {
+    return {
         "A": {"label": "A. FFT only", "cols": g["fft"]},
         "B": {"label": "B. DWT only", "cols": g["dwt"]},
         "C": {"label": "C. Statistical only", "cols": g["stat"]},
@@ -73,13 +73,10 @@ def define_configurations(feature_groups):
             "cols": g["fft"] + g["dwt"] + g["stat"] + g["stft"] + g["wpt"] + g["hht"],
         },
     }
-    return configs
 
 
 def build_xgb_classifier(random_state=42, n_estimators=100, max_depth=6, learning_rate=0.1):
-    """
-    Constructs an XGBoost multi-class classifier with reproducible hyperparameters.
-    """
+    """Construct the XGBoost multi-class classifier with fixed hyperparameters."""
     return xgb.XGBClassifier(
         n_estimators=n_estimators,
         max_depth=max_depth,
@@ -101,47 +98,63 @@ def run_comparative_experiments(
     save_dir="outputs",
 ):
     """
-    Executes the full comparative benchmark across configurations A through L.
+    Evaluate configurations A-L with a stratified hold-out test set.
 
-    Methodological safeguards:
-    - Fixed train/test split (80% train, 20% test) stratified by class.
-    - Zero data leakage: StandardScaler is fitted strictly on the training partition.
-    - 5-fold stratified cross-validation on the training set for model validation.
-    - Evaluation on held-out test set reporting: Accuracy, Macro-Precision, Macro-Recall, Macro-F1.
-    - Confusion matrices and per-class reports saved to disk.
+    StandardScaler is placed inside a Pipeline for cross-validation, ensuring
+    that each fold fits preprocessing only on that fold's training subset.
+    Configurations are selected using training-partition CV macro-F1. The
+    held-out test set is reserved for final performance estimation.
+
+    Results from earlier evaluation code are not automatically comparable to
+    results generated with this corrected evaluation protocol. Rerun the
+    experiments before updating any reported metrics.
     """
+    required = {"class_index", "class_label"}
+    missing = required.difference(df_features.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+    if not 0 < test_size < 1:
+        raise ValueError("test_size must be strictly between 0 and 1.")
+    if cv_folds < 2:
+        raise ValueError("cv_folds must be at least 2.")
+
     os.makedirs(save_dir, exist_ok=True)
-    os.makedirs(os.path.join(save_dir, "models"), exist_ok=True)
+    models_dir = os.path.join(save_dir, "models")
+    os.makedirs(models_dir, exist_ok=True)
     os.makedirs(os.path.join(save_dir, "figures"), exist_ok=True)
 
-    y = df_features["class_index"].values
-    class_labels = df_features["class_label"].values
-    
-    # Unique ordered class names
+    y = df_features["class_index"].to_numpy()
+    if pd.isna(y).any():
+        raise ValueError("class_index contains missing values.")
+
     unique_indices = np.unique(y)
     class_names = [
-        df_features[df_features["class_index"] == idx]["class_label"].iloc[0]
+        str(df_features.loc[df_features["class_index"] == idx, "class_label"].iloc[0])
         for idx in unique_indices
     ]
+    if len(class_names) != 17:
+        raise ValueError(f"Expected 17 classes, found {len(class_names)}.")
 
     feature_groups = get_feature_groups(df_features)
     configs = define_configurations(feature_groups)
+    empty_configs = [key for key, cfg in configs.items() if not cfg["cols"]]
+    if empty_configs:
+        raise ValueError(f"No feature columns found for configurations: {empty_configs}")
 
-    results_records = []
-    trained_models = {}
-    test_predictions = {}
-    confusion_matrices = {}
-    scalers = {}
+    all_feature_cols = sorted({col for cfg in configs.values() for col in cfg["cols"]})
+    all_features = df_features[all_feature_cols].to_numpy(dtype=float)
+    if not np.isfinite(all_features).all():
+        raise ValueError("Feature matrix contains NaN or infinite values.")
 
     print("=" * 80)
-    print("  STARTING XGBOOST COMPARATIVE EVALUATION ACROSS 12 FEATURE CONFIGURATIONS  ")
+    print("  STARTING XGBOOST COMPARATIVE EVALUATION ACROSS 12 CONFIGURATIONS")
     print("=" * 80)
     print(f"Total signals: {len(df_features)} across {len(class_names)} classes.")
-    print(f"Train/Test Split: {1 - test_size:.0%} train ({int(len(df_features)*(1-test_size))}) / {test_size:.0%} test ({int(len(df_features)*test_size)}) [Stratified]")
+    print(f"Train/Test Split: {1-test_size:.0%} train / {test_size:.0%} test [Stratified]")
     print(f"Cross-Validation: {cv_folds}-Fold Stratified CV on Training Partition")
+    print("Configuration selection: training CV macro-F1; test set is not used.")
     print("-" * 80)
 
-    # Global train-test index split to maintain absolute consistency across all configs
     indices = np.arange(len(df_features))
     train_idx, test_idx = train_test_split(
         indices,
@@ -151,31 +164,58 @@ def run_comparative_experiments(
     )
     y_train, y_test = y[train_idx], y[test_idx]
 
+    results_records = []
+    trained_models = {}
+    test_predictions = {}
+    confusion_matrices = {}
+    scalers = {}
+    cv_results = {}
+
+    scoring = {
+        "accuracy": "accuracy",
+        "macro_f1": make_scorer(f1_score, average="macro", zero_division=0),
+    }
+
     for cfg_key, cfg in configs.items():
         cols = cfg["cols"]
-        label = cfg["label"]
-        num_feats = len(cols)
-        print(f"\n>>> Running Configuration [{cfg_key}]: {label} ({num_feats} features)...")
+        print(
+            f"\n>>> Running Configuration [{cfg_key}]: "
+            f"{cfg['label']} ({len(cols)} features)..."
+        )
         t0 = time.time()
 
-        X_raw = df_features[cols].values
-        X_train_raw = X_raw[train_idx]
-        X_test_raw = X_raw[test_idx]
+        X_raw = df_features[cols].to_numpy(dtype=float)
+        X_train_raw, X_test_raw = X_raw[train_idx], X_raw[test_idx]
 
-        # Fit Scaler ONLY on train
+        skf = StratifiedKFold(
+            n_splits=cv_folds, shuffle=True, random_state=random_state
+        )
+        cv_pipeline = Pipeline(
+            steps=[
+                ("scaler", StandardScaler()),
+                ("classifier", build_xgb_classifier(random_state=random_state)),
+            ]
+        )
+        fold_scores = cross_validate(
+            cv_pipeline,
+            X_train_raw,
+            y_train,
+            cv=skf,
+            scoring=scoring,
+            return_train_score=False,
+            n_jobs=1,
+            error_score="raise",
+        )
+
+        cv_acc_mean = float(np.mean(fold_scores["test_accuracy"]))
+        cv_acc_std = float(np.std(fold_scores["test_accuracy"], ddof=1))
+        cv_f1_mean = float(np.mean(fold_scores["test_macro_f1"]))
+        cv_f1_std = float(np.std(fold_scores["test_macro_f1"], ddof=1))
+
+        # Fit the final deployable model on the complete outer training split.
         scaler = StandardScaler()
         X_train = scaler.fit_transform(X_train_raw)
         X_test = scaler.transform(X_test_raw)
-        scalers[cfg_key] = scaler
-
-        # 5-Fold Stratified Cross-Validation on Training partition
-        clf_cv = build_xgb_classifier(random_state=random_state)
-        skf = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
-        cv_scores = cross_val_score(clf_cv, X_train, y_train, cv=skf, scoring="accuracy", n_jobs=-1)
-        cv_mean = float(np.mean(cv_scores))
-        cv_std = float(np.std(cv_scores))
-
-        # Train final model on entire training partition
         clf = build_xgb_classifier(random_state=random_state)
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
@@ -185,62 +225,100 @@ def run_comparative_experiments(
         prec = float(precision_score(y_test, y_pred, average="macro", zero_division=0))
         rec = float(recall_score(y_test, y_pred, average="macro", zero_division=0))
         f1 = float(f1_score(y_test, y_pred, average="macro", zero_division=0))
-        cm = confusion_matrix(y_test, y_pred)
+        cm = confusion_matrix(y_test, y_pred, labels=unique_indices)
 
-        print(f"    Train CV Acc: {cv_mean*100:.2f}% (+/- {cv_std*100:.2f}%)")
-        print(f"    Test Acc    : {acc*100:.2f}% | Macro-F1: {f1*100:.2f}% | Elapsed: {elapsed:.2f}s")
+        print(
+            f"    CV Accuracy: {cv_acc_mean*100:.2f}% "
+            f"(SD {cv_acc_std*100:.2f}%)"
+        )
+        print(
+            f"    CV Macro-F1: {cv_f1_mean*100:.2f}% "
+            f"(SD {cv_f1_std*100:.2f}%)"
+        )
+        print(
+            f"    Test Accuracy: {acc*100:.2f}% | Test Macro-F1: {f1*100:.2f}% "
+            f"| Elapsed: {elapsed:.2f}s"
+        )
 
-        results_records.append({
-            "config_id": cfg_key,
-            "config_label": label,
-            "num_features": num_feats,
-            "train_cv_acc": cv_mean,
-            "train_cv_std": cv_std,
-            "accuracy": acc,
-            "macro_precision": prec,
-            "macro_recall": rec,
-            "macro_f1": f1,
-            "train_time_sec": elapsed,
-        })
+        results_records.append(
+            {
+                "config_id": cfg_key,
+                "config_label": cfg["label"],
+                "num_features": len(cols),
+                "train_cv_accuracy_mean": cv_acc_mean,
+                "train_cv_accuracy_std": cv_acc_std,
+                "train_cv_macro_f1_mean": cv_f1_mean,
+                "train_cv_macro_f1_std": cv_f1_std,
+                "accuracy": acc,
+                "macro_precision": prec,
+                "macro_recall": rec,
+                "macro_f1": f1,
+                "train_time_sec": elapsed,
+            }
+        )
 
         trained_models[cfg_key] = clf
         test_predictions[cfg_key] = y_pred
         confusion_matrices[cfg_key] = cm
+        scalers[cfg_key] = scaler
+        cv_results[cfg_key] = fold_scores
 
     comparison_df = pd.DataFrame(results_records)
     csv_path = os.path.join(save_dir, "comparative_model_results.csv")
     comparison_df.to_csv(csv_path, index=False)
     print(f"\nSaved comparative benchmark results table to: {csv_path}")
 
-    # Per-Class Report for Configuration L (All Features) and Best Configuration
-    best_cfg_key = comparison_df.sort_values(by="macro_f1", ascending=False).iloc[0]["config_id"]
-    print(f"\nBest Performing Configuration: [{best_cfg_key}] {configs[best_cfg_key]['label']}")
+    # Select using training CV macro-F1 only. Deterministic tie-breaks prefer
+    # fewer features, then the original A-L configuration order.
+    ranking = comparison_df.copy()
+    ranking["config_order"] = ranking["config_id"].map(
+        {key: order for order, key in enumerate(configs)}
+    )
+    ranking = ranking.sort_values(
+        by=["train_cv_macro_f1_mean", "num_features", "config_order"],
+        ascending=[False, True, True],
+        kind="stable",
+    )
+    best_cfg_key = str(ranking.iloc[0]["config_id"])
+    print(
+        f"\nBest configuration by training CV macro-F1: [{best_cfg_key}] "
+        f"{configs[best_cfg_key]['label']}"
+    )
 
     best_pred = test_predictions[best_cfg_key]
     report_dict = classification_report(
-        y_test, best_pred, target_names=class_names, output_dict=True, zero_division=0
+        y_test,
+        best_pred,
+        labels=unique_indices,
+        target_names=class_names,
+        output_dict=True,
+        zero_division=0,
     )
     report_df = pd.DataFrame(report_dict).transpose()
-    report_csv = os.path.join(save_dir, f"per_class_report_best_config_{best_cfg_key}.csv")
+    report_csv = os.path.join(
+        save_dir, f"per_class_report_best_config_{best_cfg_key}.csv"
+    )
     report_df.to_csv(report_csv)
-    print(f"Saved per-class performance report for Best Configuration [{best_cfg_key}] to: {report_csv}")
+    print(f"Saved held-out test report to: {report_csv}")
 
-    # Save model for best config
-    best_model_path = os.path.join(save_dir, "models", f"xgboost_best_model_{best_cfg_key}.json")
+    best_model_path = os.path.join(
+        models_dir, f"xgboost_best_model_{best_cfg_key}.json"
+    )
     trained_models[best_cfg_key].save_model(best_model_path)
-    print(f"Saved best model artifact to: {best_model_path}")
-
-    # Save fitted scaler for best config
-    import joblib
-    best_scaler_path = os.path.join(save_dir, "models", f"scaler_best_config_{best_cfg_key}.joblib")
+    best_scaler_path = os.path.join(
+        models_dir, f"scaler_best_config_{best_cfg_key}.joblib"
+    )
     joblib.dump(scalers[best_cfg_key], best_scaler_path)
-    print(f"Saved best scaler artifact to: {best_scaler_path}")
+    print(f"Saved selected model to: {best_model_path}")
+    print(f"Saved selected scaler to: {best_scaler_path}")
 
-    # Also save Configuration L model if different
-    if best_cfg_key != "L":
-        model_l_path = os.path.join(save_dir, "models", "xgboost_model_L_all_features.json")
-        trained_models["L"].save_model(model_l_path)
-        print(f"Saved Config L model to: {model_l_path}")
+    # Preserve Config-L artifacts for existing inference/dashboard consumers.
+    model_l_path = os.path.join(models_dir, "xgboost_model_L_all_features.json")
+    scaler_l_path = os.path.join(models_dir, "scaler_config_L_all_features.joblib")
+    trained_models["L"].save_model(model_l_path)
+    joblib.dump(scalers["L"], scaler_l_path)
+    print(f"Saved Config-L model to: {model_l_path}")
+    print(f"Saved Config-L scaler to: {scaler_l_path}")
 
     return {
         "comparison_df": comparison_df,
@@ -250,6 +328,7 @@ def run_comparative_experiments(
         "test_predictions": test_predictions,
         "trained_models": trained_models,
         "scalers": scalers,
+        "cv_results": cv_results,
         "train_idx": train_idx,
         "test_idx": test_idx,
         "y_test": y_test,
