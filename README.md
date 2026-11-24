@@ -96,31 +96,24 @@ ML Code/
 
 ---
 
-## 4. How to Set Up & Run
+## 4. Execution Sequence
 
-### A. Environment Installation
-Ensure Python 3.9+ is installed, then install dependencies:
-```bash
-pip install -r requirements.txt
-```
+Follow the complete [Execution Guide](docs/EXECUTION_GUIDE.md) for environment setup, dataset preparation, command order, outputs, and troubleshooting.
 
-### B. Running Milestone 1 (Baseline FFT & DWT)
-```bash
-python run_milestone_1.py
-```
+Quick run order from the repository root:
 
-### C. Running Master Extended Pipeline (All 6 Methods + XGBoost Benchmark)
-To extract all 66 features, validate the matrix, generate all figures, and evaluate configurations A through L:
-```bash
-python main.py
-```
-*(Execution finishes in ~95 seconds using multi-core parallelization).*
+1. Create and activate a Python virtual environment; install dependencies with `pip install -r requirements.txt`.
+2. Download and extract SEED-PQD so the XPQRS class CSV files are available under `data/raw/XPQRS/`.
+3. Run the primary feature extraction and clean benchmark: `python main.py`.
+4. Run Config-L waveform inference after the model and scaler artifacts have been generated: `python predict.py`.
+5. Run AWGN robustness evaluation after the feature matrix exists: `python run_noise_robustness.py`.
+6. Optionally run the separate legacy FFT+DWT milestone: `python run_milestone_1.py`.
 
----
+Do not assume that cached features are current merely because their shape is correct. See the Execution Guide for the cache warning and reproducibility checklist.
 
 ## 5. Comparative XGBoost Benchmark Results (17 Classes, Stratified 80/20 Split)
 
-All experiments were executed with a strict 80/20 stratified train/test split (13,600 train / 3,400 test) with 5-fold cross-validation on the training set:
+Historical baseline results (from the earlier pipeline; retained for traceability, not presented as outputs of the corrected CV implementation) used an 80/20 stratified train/test split (13,600 train / 3,400 test) and 5-fold cross-validation on the training set. Re-run the current branch before treating these values as verified:
 
 | Config | Feature Configuration | # Feats | Train CV Acc | Test Acc | Macro Precision | Macro Recall | Macro F1 | Train Time |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -150,7 +143,7 @@ All experiments were executed with a strict 80/20 stratified train/test split (1
 
 ## 6. Noise Robustness (AWGN) Stress-Testing Results
 
-Disturbance categories and synthetic definitions adhere to **IEEE Std 1159-2019**, while the noise stress-testing protocol applies zero-mean Additive White Gaussian Noise (AWGN) at $40\text{ dB}$, $30\text{ dB}$, and $20\text{ dB}$ SNR following established power-engineering benchmarks:
+Historical single-realization results below are retained for traceability and must not be treated as verified results from the revised runner. The current AWGN implementation uses a fixed seed and one noise realization per SNR; it is a preliminary stress test, not a Monte Carlo estimate. Disturbance categories and synthetic definitions are described with reference to **IEEE Std 1159-2019**, while the noise stress-testing protocol applies zero-mean Additive White Gaussian Noise (AWGN) at $40\text{ dB}$, $30\text{ dB}$, and $20\text{ dB}$ SNR following established power-engineering benchmarks:
 
 | Configuration | Clean ($\infty$) | 40 dB SNR | 30 dB SNR | 20 dB SNR | Degradation (pp) | Relative Loss (%) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -169,7 +162,7 @@ Disturbance categories and synthetic definitions adhere to **IEEE Std 1159-2019*
 
 *Note: Degradation is expressed both as absolute percentage points ($\text{pp} = \text{Acc}_{20\text{dB}} - \text{Acc}_{\text{clean}}$) and relative percentage loss ($(\text{Acc}_{20\text{dB}} - \text{Acc}_{\text{clean}}) / \text{Acc}_{\text{clean}}$).*
 
-### Physical Noise Mechanisms Discovered:
+### Physical Noise Mechanisms Hypothesized from the Current Feature Design:
 - **STFT Low-Band Noise Filtering**: STFT's energy features concentrate in the $0\text{--}300\text{ Hz}$ band. Because white noise is uniformly distributed across the full Nyquist bandwidth ($0\text{--}2,500\text{ Hz}$), only $\approx 12\%$ of total noise energy enters the primary diagnostic band, preserving $100\%$ of fundamental power energy and yielding the highest noise resilience.
 - **HHT EMD Mode Mixing**: EMD sifting relies directly on local extrema. Broadband white noise creates dense high-frequency extrema that corrupt IMFs 1 & 2, pushing the fundamental 50 Hz power disturbance into IMF 3 (omitted by the 2-mode decomposition), causing sharp performance degradation.
 
@@ -180,17 +173,17 @@ python run_noise_robustness.py
 
 ---
 
-## 7. Master 10-Step Roadmap Progress (100% Complete)
+## 7. Project Implementation Checklist
 
 | Step | Phase Description | Status | Deliverables / Output |
 | :---: | :--- | :---: | :--- |
 | **1** | Dataset acquisition and inspection | **Completed** | SEED-PQD v1 verified (17,000 signals, 17 classes) |
-| **2** | Data loading and preprocessing | **Completed** | [`src/data_loader.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/data_loader.py) |
-| **3** | Initial signal processing (FFT & DWT) | **Completed** | [`src/signal_processing.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/signal_processing.py) (27 features) |
+| **2** | Data loading and preprocessing | **Completed** | [`src/data_loader.py`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/data_loader.py)`) |
+| **3** | Initial signal processing (FFT & DWT) | **Completed** | [`src/signal_processing.py`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/signal_processing.py)`) (27 features) |
 | **4** | Additional signal processing (STFT, Stats, WPT, HHT) | **Completed** | Sections D, E, F, G in `src/signal_processing.py` (39 features) |
-| **5** | Feature dataset preparation & normalization | **Completed** | [`data/processed/extended_features.csv`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/data/processed/extended_features.csv) (17,000 x 68) |
-| **6** | Machine-learning implementation (XGBoost) | **Completed** | [`main.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/main.py), [`src/classification.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/classification.py) |
-| **7** | Model evaluation (Metrics & Confusion Matrices) | **Completed** | [`outputs/comparative_model_results.csv`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/comparative_model_results.csv), confusion matrices |
-| **8** | Comparative analysis across signal processing techniques | **Completed** | [`outputs/figures/method_comparison.png`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/figures/method_comparison.png) |
-| **9** | Validation, robustness (Noise/AWGN), and research contribution | **Completed** | [`run_noise_robustness.py`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/run_noise_robustness.py), [`docs/Noise_Robustness_Audit.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Noise_Robustness_Audit.md) |
-| **10** | Final documentation, thesis, and defense presentation | **Completed** | [`docs/Final_Technical_Report.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Final_Technical_Report.md), [`docs/Defense_Presentation_Slides.md`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Defense_Presentation_Slides.md) |
+| **5** | Feature dataset preparation & normalization | **Completed** | [`data/processed/extended_features.csv`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/data/processed/extended_features.csv)`) (17,000 x 68) |
+| **6** | Machine-learning implementation (XGBoost) | **Completed** | [`main.py`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/main.py)`), [`src/classification.py`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/src/classification.py)`) |
+| **7** | Model evaluation (Metrics & Confusion Matrices) | **Completed** | [`outputs/comparative_model_results.csv`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/comparative_model_results.csv)`), confusion matrices |
+| **8** | Comparative analysis across signal processing techniques | **Completed** | [`outputs/figures/method_comparison.png`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/outputs/figures/method_comparison.png)`) |
+| **9** | Validation, robustness (Noise/AWGN), and research contribution | **Completed** | [`run_noise_robustness.py`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/run_noise_robustness.py)`), [`docs/Noise_Robustness_Audit.md`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Noise_Robustness_Audit.md)`) |
+| **10** | Final documentation, thesis, and defense presentation | **Completed** | [`docs/Final_Technical_Report.md`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Final_Technical_Report.md)`), [`docs/Defense_Presentation_Slides.md`](`](file:///c:/Drive%20E_F/NIT%20Jalandhar/4th%20Year/7th%20Semester/Major%20Project/ML%20Code/docs/Defense_Presentation_Slides.md)`) |
