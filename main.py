@@ -235,7 +235,7 @@ def main():
 
     # 7. Generate Visualizations for ML Results
     print("\n>>> [STEP 7] Generating Confusion Matrices and Method Comparison Plots...")
-    # Confusion matrix for Clean Best Model (Config L)
+    # Confusion matrix for the configuration selected by training-set CV macro-F1.
     best_acc = comparison_df.loc[comparison_df['config_id']==best_cfg_key, 'accuracy'].values[0] * 100.0
     plot_confusion_matrix(
         cms[best_cfg_key],

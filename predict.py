@@ -178,7 +178,7 @@ def main():
         print(f"{true_label:<26} | {pred:<26} | {conf:>7.2f}%   | {lat:>5.2f} ms | {match}")
 
     print("-" * 88)
-    print("Inference completed successfully. All signals evaluated in < 10 ms (well within 20 ms cycle budget)!")
+    print("Inference completed. Reported latency is a local measurement; validate repeated-run latency on the target hardware before making real-time claims.")
 
 
 if __name__ == "__main__":

@@ -64,7 +64,7 @@ def main():
     # 3. Run the corrected clean evaluation once and reuse its exact split,
     # fitted models, and scalers for the AWGN benchmark. Never reuse a stale
     # committed CSV as the clean baseline for newly trained noisy-test models.
-    print("\\n>>> [STEP 3] Running corrected clean benchmark and retaining its fitted artifacts...")
+    print("\n>>> [STEP 3] Running corrected clean benchmark and retaining its fitted artifacts...")
     clean_eval = run_comparative_experiments(
         df_features,
         test_size=0.20,
