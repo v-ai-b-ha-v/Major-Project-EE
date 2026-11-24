@@ -5,9 +5,9 @@ Project: Comparative Analysis of Signal Processing Techniques for
          Machine Learning-Based Power Quality Disturbance Classification
 Runner: predict.py
 
-This script loads the trained production model (xgboost_best_model_L.json)
-and fitted StandardScaler (scaler_best_config_L.joblib) to perform real-time
-sub-cycle inference on raw voltage waveforms.
+This script loads the dedicated Config-L compatibility model
+(xgboost_model_L_all_features.json) and scaler
+(scaler_config_L_all_features.joblib) to perform inference using all 66 features.
 
 Usage:
 ------
@@ -39,8 +39,8 @@ if PROJECT_ROOT not in sys.path:
 from src.signal_processing import extract_all_extended_features_single_signal
 from src.data_loader import CLASS_NAMES
 
-MODEL_PATH = os.path.join(PROJECT_ROOT, "outputs", "models", "xgboost_best_model_L.json")
-SCALER_PATH = os.path.join(PROJECT_ROOT, "outputs", "models", "scaler_best_config_L.joblib")
+MODEL_PATH = os.path.join(PROJECT_ROOT, "outputs", "models", "xgboost_model_L_all_features.json")
+SCALER_PATH = os.path.join(PROJECT_ROOT, "outputs", "models", "scaler_config_L_all_features.joblib")
 
 
 def load_inference_artifacts():
@@ -58,51 +58,70 @@ def load_inference_artifacts():
 
 def predict_waveform(signal, model=None, scaler=None, fs=5000):
     """
-    Performs end-to-end inference on a 1D voltage signal array (100 samples).
-    
-    Returns:
-    --------
-    dict with predicted_class, confidence, top3_candidates, and latency_ms.
+    Perform inference on one 100-sample waveform using the Config-L model.
+
+    Returns predicted class, confidence, top-3 candidates, latency breakdown,
+    and the extracted feature dictionary.
     """
+    signal = np.asarray(signal, dtype=np.float64).reshape(-1)
+    if signal.size != 100:
+        raise ValueError(
+            f"Expected exactly 100 samples per waveform; received {signal.size}."
+        )
+    if not np.isfinite(signal).all():
+        raise ValueError("Waveform contains NaN or infinite values.")
+    if not np.isclose(float(fs), 5000.0):
+        raise ValueError(
+            f"Model was trained for 5000 Hz sampling; received fs={fs} Hz."
+        )
+
     if model is None or scaler is None:
         model, scaler = load_inference_artifacts()
 
     start_time = time.perf_counter()
 
-    # 1. Feature Extraction (66 features across 6 methods)
+    # 1. Extract all 66 features in the same family order used by the dataset.
     feat_start = time.perf_counter()
     features_dict = extract_all_extended_features_single_signal(signal, fs=fs)
     feat_time_ms = (time.perf_counter() - feat_start) * 1000.0
+    feature_vector = np.asarray([list(features_dict.values())], dtype=np.float64)
 
-    # 2. Standardization
-    feature_vector = np.array([list(features_dict.values())])
+    expected_features = getattr(scaler, "n_features_in_", None)
+    if expected_features is not None and feature_vector.shape[1] != expected_features:
+        raise ValueError(
+            "Feature-schema mismatch: extracted "
+            f"{feature_vector.shape[1]} features, but Config-L scaler expects "
+            f"{expected_features}."
+        )
+
+    # 2. Apply the Config-L training scaler.
     feature_vector_scaled = scaler.transform(feature_vector)
 
-    # 3. XGBoost Inference
+    # 3. XGBoost inference.
     inf_start = time.perf_counter()
     probabilities = model.predict_proba(feature_vector_scaled)[0]
     inf_time_ms = (time.perf_counter() - inf_start) * 1000.0
 
-    total_time_ms = (time.perf_counter() - start_time) * 1000.0
+    if len(probabilities) != len(CLASS_NAMES):
+        raise ValueError(
+            f"Model returned {len(probabilities)} class probabilities; "
+            f"expected {len(CLASS_NAMES)}."
+        )
 
-    # Rank classes by probability
+    total_time_ms = (time.perf_counter() - start_time) * 1000.0
     top3_indices = np.argsort(probabilities)[::-1][:3]
     top3 = [(CLASS_NAMES[idx], float(probabilities[idx])) for idx in top3_indices]
-
-    best_idx = top3_indices[0]
-    best_class = CLASS_NAMES[best_idx]
-    best_conf = float(probabilities[best_idx])
+    best_idx = int(top3_indices[0])
 
     return {
-        "predicted_class": best_class,
-        "confidence": best_conf,
+        "predicted_class": CLASS_NAMES[best_idx],
+        "confidence": float(probabilities[best_idx]),
         "top3": top3,
         "total_latency_ms": total_time_ms,
         "feature_latency_ms": feat_time_ms,
         "inference_latency_ms": inf_time_ms,
         "features": features_dict,
     }
-
 
 def main():
     parser = argparse.ArgumentParser(description="Real-Time PQD Inference Engine")
